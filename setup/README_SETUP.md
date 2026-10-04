@@ -30,7 +30,9 @@ Close Fusion before installing or uninstalling. Uninstall an existing Airfoil Sp
 through Windows Settings > Apps before manually installing the new package.
 Uninstall legacy add-in (AF) before installing Airfoil Splines (AS).
 The installer blocks installation when it detects the legacy MSI and never removes it automatically. Remove any manually installed legacy add-in from Fusion before using Airfoil Splines.
-To remove Airfoil Splines, use Installed Apps or run its MSI again.
+To remove the add-in, select **Airfoil Splines for Fusion** in Installed Apps or run its MSI again.
+Older installers may list it as **Airfoil Splines**. The installer filename, App Store
+name, and name inside Fusion remain **Airfoil Splines**.
 
 ## Separate application identity
 
