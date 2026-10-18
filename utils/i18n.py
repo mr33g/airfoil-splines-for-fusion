@@ -66,11 +66,11 @@ STRINGS = {
     },
     "de": {
         "deps_missing_msg": (
-            "Airfoil Splines benoetigt externe Bibliotheken (numpy, scipy).\n\n"
+            "Airfoil Splines benötigt externe Bibliotheken (numpy, scipy).\n\n"
             "Diese wurden im Ordner 'lib' nicht gefunden.\n"
-            "Moechten Sie eine lokale Installation im Add-in-Ordner versuchen?"
+            "Möchten Sie eine lokale Installation im Add-in-Ordner versuchen?"
         ),
-        "deps_missing_title": "Abhaengigkeiten fehlen",
+        "deps_missing_title": "Abhängigkeiten fehlen",
         "deps_install_started": (
             "Die Installation wurde in einem separaten Fenster gestartet.\n\n"
             "Bitte warten Sie, bis sie abgeschlossen ist, und starten Sie Fusion dann neu."
@@ -78,28 +78,28 @@ STRINGS = {
         "deps_install_complete": "Installation abgeschlossen. Bitte Fusion neu starten.",
         "deps_install_failed": (
             "Fehlgeschlagene Installation: {error}\n\n"
-            "Bitte installieren Sie die Abhaengigkeiten manuell."
+            "Bitte installieren Sie die Abhängigkeiten manuell."
         ),
-        "cmd_button_name": "Profil einfuegen",
+        "cmd_button_name": "Profil einfügen",
         "cmd_button_desc": "Spline an eine .dat-Profildatei im Selig- oder Lednicer-Format anpassen",
         "failed_to_start": "Start fehlgeschlagen:\n{error}",
         "update_available": (
-            "Eine neuere Version von Airfoil Splines ist verfuegbar.\n\n"
+            "Eine neuere Version von Airfoil Splines ist verfügbar.\n\n"
             "Installierte Version: {local_version}\n"
             "Neueste Version: {remote_version}\n\n"
             "Download im Autodesk App Store:\n{app_store_url}"
         ),
-        "select_chord_line": "Sehnenlinie auswaehlen",
-        "select_chord_line_help": "Waehlen Sie eine Linie aus",
-        "select_airfoil": "Datei auswaehlen",
-        "selected_file": "Ausgewaehlte Datei",
+        "select_chord_line": "Sehnenlinie auswählen",
+        "select_chord_line_help": "Wählen Sie eine Linie aus",
+        "select_airfoil": "Datei auswählen",
+        "selected_file": "Ausgewählte Datei",
         "fitter_settings": "Fitter Einstellungen",
         "initial_cp_count": "Initiale Kontrollpunkte",
         "cp_count_upper": "Punkte Oberseite",
         "cp_count_lower": "Punkte Unterseite",
-        "reset": "Zuruecksetzen",
-        "smoothness_penalty": "Glaettung",
-        "le_continuity": "Kontinuitaet",
+        "reset": "Zurücksetzen",
+        "smoothness_penalty": "Glättung",
+        "le_continuity": "Kontinuität",
         "import_settings": "Import Einstellungen",
         "turn_90": "Um 90\u00b0 drehen",
         "flip": "Spiegeln",
@@ -110,18 +110,18 @@ STRINGS = {
         "show_input_data": "Rohdaten anzeigen",
         "ui_creation_failed": "UI-Erstellung fehlgeschlagen:\n{error}",
         "command_created_failed": "Befehlserstellung fehlgeschlagen:\n{error}",
-        "execution_error": "Ausfuehrungsfehler:\n{error}",
+        "execution_error": "Ausführungsfehler:\n{error}",
         "file_filter": "Profil (*.dat);;Alle Dateien (*.*)",
-        "failed_load_airfoil_data": "Profildaten konnten nicht geladen werden. Bitte Dateipfad pruefen und erneut versuchen.",
-        "failed_fit_airfoil": "Profilanpassung fehlgeschlagen. Bitte Eingabeparameter pruefen und erneut versuchen.",
-        "failed_insert_knot": "Knoten konnte auf der {surface}-Flaeche nicht eingefuegt werden.",
-        "failed_refit_surface": "Neu-Anpassung der {surface}-Flaeche mit reduzierter Kontrollpunktzahl fehlgeschlagen.",
+        "failed_load_airfoil_data": "Profildaten konnten nicht geladen werden. Bitte Dateipfad prüfen und erneut versuchen.",
+        "failed_fit_airfoil": "Profilanpassung fehlgeschlagen. Bitte Eingabeparameter prüfen und erneut versuchen.",
+        "failed_insert_knot": "Knoten konnte auf der {surface}-Fläche nicht eingefügt werden.",
+        "failed_refit_surface": "Neu-Anpassung der {surface}-Fläche mit reduzierter Kontrollpunktzahl fehlgeschlagen.",
         "failed_create_airfoil_plane": (
-            "Die Skizzenebene fuer das Profil konnte nicht erstellt werden.\n\n"
+            "Die Skizzenebene für das Profil konnte nicht erstellt werden.\n\n"
             "{error}\n\n"
             "Details stehen im Textbefehlsprotokoll (Strg+Alt+C)."
         ),
-        "generic_error": "Ein Fehler ist aufgetreten. Bitte pruefen Sie das Protokoll fuer Details.",
+        "generic_error": "Ein Fehler ist aufgetreten. Bitte prüfen Sie das Protokoll für Details.",
     },
     "it": {
         "deps_missing_msg": (

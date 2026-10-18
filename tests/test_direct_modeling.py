@@ -39,8 +39,9 @@ class DirectModelingTests(unittest.TestCase):
         self.line = NS(parentSketch=self.source, startSketchPoint=NS(worldGeometry=Point(0,0,0)))
         controls = dict(chord_line=NS(selectionCount=1, selection=lambda _: NS(entity=self.line)),
             file_path=NS(value='foil.dat'), te_thickness=NS(value=gap),
-            continuity_level=NS(selectedItem=NS(name='G2')), initial_cp_count=NS(value=5),
-            smoothness_input=NS(valueOne=.001))
+            continuity_level=NS(selectedItem=NS(name='G2')),
+            initial_cp_count=NS(value=5),
+            smoothness_input=NS(value=.001))
         self.inputs = NS(itemById=controls.get)
         self.cache = dict(upper_cp_raw=np.array([[0.,0.],[1.,gap/2]]),
                           lower_cp_raw=np.array([[0.,0.],[1.,-gap/2]]),
@@ -110,6 +111,24 @@ class DirectModelingTests(unittest.TestCase):
         self.resolve.assert_not_called()
         self.create.assert_not_called()
         self.timeline.assert_not_called()
+
+    def test_fallback_logs_effective_settings(self):
+        self.setup_case()
+        self.state.needs_refit = True
+        recovered = dict(self.cache, fallback_used=True)
+
+        def fit_with_fallback(_recipe, values, _chord_length):
+            values['smoothness'] = 0.0
+            values['continuity'] = 1
+            return recovered
+
+        self.recipe.fit_data.side_effect = fit_with_fallback
+        with patch.object(self.module.os.path, 'exists', return_value=True):
+            self.assertTrue(self.module.run_fitter(self.inputs, True, initialize_te=False))
+
+        self.app.log.assert_called_with(
+            'AirfoilSplines fit fallback: requested G2 smoothing=0.001; '
+            'using G1 smoothing=0.')
 
     def test_direct_creation_failure_is_reported_for_command_rollback(self):
         self.setup_case()

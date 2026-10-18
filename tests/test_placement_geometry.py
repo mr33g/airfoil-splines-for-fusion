@@ -139,14 +139,15 @@ class FusionSplineAdapterTests(unittest.TestCase):
         spline=NS(isControlPolygonVisible=False)
         add=Mock(return_value=spline)
         sketch=NS(sketchCurves=NS(sketchFixedSplines=NS(addByNurbsCurve=add)))
-        cps=np.array([[0.,0.],[0.,1.],[1.,1.],[1.,0.]])
-        knots=np.array([0,0,0,0,1,1,1,1])
-        self.assertIs(module.create_fusion_spline(sketch,cps,knots,3),spline)
-        create.assert_called_once_with([(0.,0.,0),(0.,1.,0),(1.,1.,0),(1.,0.,0)],3,knots.tolist(),False)
+        cps=np.column_stack((np.linspace(0.,1.,10),np.linspace(0.,.1,10)))
+        knots=np.array([0,0,0,0,0,.2,.4,.6,.8,1,1,1,1,1])
+        self.assertIs(module.create_fusion_spline(sketch,cps,knots,4),spline)
+        expected_points=[(float(x),float(y),0) for x,y in cps]
+        create.assert_called_once_with(expected_points,4,knots.tolist(),False)
         add.assert_called_once_with(geometry)
         self.assertTrue(spline.isControlPolygonVisible)
         create.return_value=None
         add.reset_mock()
         with self.assertRaisesRegex(RuntimeError,'returned None'):
-            module.create_fusion_spline(sketch,cps,knots,3)
+            module.create_fusion_spline(sketch,cps,knots,4)
         add.assert_not_called()

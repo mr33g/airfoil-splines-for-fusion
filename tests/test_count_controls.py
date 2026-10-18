@@ -83,4 +83,4 @@ class CountControlsTests(unittest.TestCase):
             data = feature_recipe.fit_data(dict(dat=dat), dict(te=.02, smoothness=.001,
                 upper_count=upper, lower_count=lower, continuity=2), 10)
             self.assertEqual((len(data['upper_cp_raw']), len(data['lower_cp_raw'])), expected)
-            self.assertEqual((data['degree_u'], data['degree_l']), tuple(n-1 for n in expected))
+            self.assertEqual((data['degree_u'], data['degree_l']), (4, 4))

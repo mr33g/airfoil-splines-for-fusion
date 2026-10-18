@@ -1,11 +1,11 @@
 import adsk.core, adsk.fusion
 import traceback
-import os
 from logic import state
 import airfoil_splines_settings as config
 from utils.i18n import t
+from utils.ui_text import selected_filename_label, set_float_input_value
 
-def create_ui_inputs(inputs, smoothness_max=0.1):
+def create_ui_inputs(inputs):
     """Defines all the UI controls for the Fusion Fitter command."""
     try:
         # 1. Line Selection (Chord Line)
@@ -17,7 +17,7 @@ def create_ui_inputs(inputs, smoothness_max=0.1):
         select_file = inputs.addBoolValueInput('select_file', t("select_airfoil"), False, '', True)
         current_file_path = state.fit_cache.get('selected_file_path', '') if isinstance(state.fit_cache, dict) else ''
         if current_file_path:
-            select_file.text = os.path.splitext(os.path.basename(current_file_path))[0]
+            select_file.text = selected_filename_label(current_file_path)
         file_path_input = inputs.addStringValueInput('file_path', t("selected_file"), '')
         file_path_input.isReadOnly = True
         file_path_input.isVisible = False
@@ -72,8 +72,12 @@ def create_ui_inputs(inputs, smoothness_max=0.1):
         cp_count_lower.isVisible = False
 
         # Smoothness penalty
-        smoothness = groupFitterSettingsChildInputs.addFloatSliderCommandInput('smoothness_input', t("smoothness_penalty"), "", 0, smoothness_max, False)
-        smoothness.valueOne = config.DEFAULT_SMOOTHNESS_PENALTY
+        smoothness = groupFitterSettingsChildInputs.addFloatSpinnerCommandInput(
+            'smoothness_input', t("smoothness_penalty"), "",
+            config.MIN_SMOOTHNESS_PENALTY, config.MAX_SMOOTHNESS_PENALTY,
+            config.SMOOTHNESS_PENALTY_STEP, config.DEFAULT_SMOOTHNESS_PENALTY
+        )
+        set_float_input_value(smoothness, config.DEFAULT_SMOOTHNESS_PENALTY)
         smoothness.isVisible = False
 
         # Options (Initially Hidden)

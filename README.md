@@ -61,9 +61,9 @@ cannot be used together.
    - Use **TE Thickness** manipulator to adjust trailing edge thickness
    - Preview is automatically displayed when both chord line and file are selected
 6. **Adjust fitting parameters**:
-   - **Initial Control Point Count** The default is 10 and achieves good results in most cases, however sometimes a better fit can be achieved by starting at a lower point count and inserting points as needed. 
+   - **Initial Control Point Count**: The default is 8. Additional points can be inserted independently on the upper and lower surfaces when needed.
    - **Control Point Count**: More points = higher accuracy but might introduce oscillations
-   - **Smoothness**: Defaults to 0.001, higher values produce smoother control polygons at the cost of accuracy. Not all airfoils require smoothing, in those cases smoothing can be set to zero.
+   - **Smoothness**: Defaults to 0.0007. Higher values produce smoother control polygons at the cost of accuracy.
    - **LE Continuity**: Default is G2, if the curvature near the leading edge is not smooth ehough, G3 can be enforced additionally. G1 is available as a fallback.
 
 7. **Curvature Comb**: analyze the airfoil's curvature in the preview.
@@ -78,13 +78,15 @@ cannot be used together.
 - **Automatic normalization**: Coordinates are translated, rotated, and scaled so the leading edge is at origin and chord lies along the X-axis
 - **Automatic repaneling**: The input data is repaneled to even out point spacing.
 
-### BÃ©zier Fitting
-- **Single-span B-Spline curves**: The fitted curves are stored as fixed NURBS splines in Fusion. Based on Dev Rajnarayan et al. 2019 (https://arc.aiaa.org/doi/10.2514/6.2018-3949).
-- **Adjustable control point count**: 4 to 19 control points per surface (upper/lower fitted independently)
+### B-Spline Fitting
+- **Degree-4 B-Spline curves**: The fitted multi-span curves are stored as fixed NURBS splines in Fusion. Based on Dev Rajnarayan et al. 2019 (https://arc.aiaa.org/doi/10.2514/6.2018-3949).
+- **Segment inspection preview**: While the command is open, adjacent non-zero knot spans alternate between blue and violet so curvature behavior at their transitions is easy to inspect.
+- **Adjustable control point count**: 5 to 19 control points per surface (upper/lower fitted independently; initially 8)
 - **G1 continuity**: (fallback) Tangent continuity is always enforced at the leading edge between upper and lower surfaces
 - **G2 continuity** (default): Curvature continuity at the leading edge via constrained optimization
 - **G3 continuity** (optional): Curvature derivative continuity at the leading edge
 - **Smoothness penalty**: Adjustable regularization to balance accuracy vs. smoothness of the control polygon
+- **Automatic fit recovery**: A failed fit is retried at zero smoothing, then at G1 with zero smoothing. The dialog reflects the settings that actually succeeded.
 
 ### Geometry Placement
 - **Chord line selection**: Select any sketch line to define the chord position and length

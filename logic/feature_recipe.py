@@ -10,6 +10,7 @@ from airfoil_splines_core import bspline_helper
 from airfoil_splines_core.airfoil_processor import AirfoilProcessor
 from airfoil_splines_core.bspline_processor import BSplineProcessor
 from airfoil_splines_core.bspline_helper import apply_te_thickness_to_reference
+from airfoil_splines_core.fit_recovery import fit_with_recovery
 
 
 SCHEMA = 1
@@ -47,21 +48,27 @@ def validate(values, chord_length):
         raise ValueError('TE thickness and smoothness must not be negative.')
     for key in ('upper_count', 'lower_count'):
         if values[key] != int(values[key]) or not config.MIN_CP_COUNT <= values[key] <= config.MAX_CP_COUNT:
-            raise ValueError('Control point counts must be whole numbers from 4 to 19.')
+            raise ValueError(
+                f'Control point counts must be whole numbers from '
+                f'{config.MIN_CP_COUNT} to {config.MAX_CP_COUNT}.')
     if values['continuity'] not in (1, 2, 3):
         raise ValueError('LE continuity must be 1, 2 or 3.')
 
 
 class AirfoilFitError(RuntimeError):
-    """The requested fit failed; AirfoilSplines does not accept weaker continuity."""
+    """The requested fit and all permitted fallback attempts failed."""
 
 
 def fit_data(recipe, values, chord_length):
     """Common numerical path for preview, insertion and feature recompute."""
     validate(values, chord_length)
-    return deepcopy(_fit_cached(recipe['dat'], values['te'] / chord_length,
+    data = deepcopy(_fit_cached(recipe['dat'], values['te'] / chord_length,
                                 values['smoothness'], int(values['upper_count']),
                                 int(values['lower_count']), int(values['continuity'])))
+    # Callers that persist parameters must store the settings that produced the curve.
+    values['smoothness'] = data['effective_smoothness']
+    values['continuity'] = data['effective_continuity']
+    return data
 
 
 def fit(recipe, values, chord_length):
@@ -87,15 +94,17 @@ def _fit_cached(dat, te, smoothness, upper_count, lower_count, continuity):
     processor = _load_source(dat)
     upper, lower = apply_te_thickness_to_reference(
         processor.upper_data, processor.lower_data, te)
-    # Choosing a single span is an AirfoilSplines policy, expressed numerically.
-    bspline = BSplineProcessor(degree=(upper_count - 1, lower_count - 1))
-    result = bspline.fit_bspline(
-        upper, lower, num_control_points=(upper_count, lower_count),
+    recovery = fit_with_recovery(
+        config.BSPLINE_DEGREE, upper, lower, (upper_count, lower_count),
         smoothing_weight=smoothness, continuity=continuity,
         upper_te_tangent_vector=processor.upper_te_tangent_vector,
         lower_te_tangent_vector=processor.lower_te_tangent_vector)
-    if not result:
-        raise AirfoilFitError(f'Cannot fit the airfoil with G{continuity} continuity: {result.message}')
+    if not recovery:
+        raise AirfoilFitError(recovery.failure_message)
+    bspline = recovery.processor
+    result = recovery.result
+    effective_smoothness = recovery.effective_smoothing
+    effective_continuity = recovery.effective_continuity
     raw_upper, raw_lower = processor.error_reference_data()
     error_upper, error_lower = apply_te_thickness_to_reference(raw_upper, raw_lower, te)
 
@@ -116,5 +125,11 @@ def _fit_cached(dat, te, smoothness, upper_count, lower_count, continuity):
         fit_upper=upper, fit_lower=lower,
         param_exponent_upper=bspline.param_exponent_upper,
         param_exponent_lower=bspline.param_exponent_lower,
-        te_value=te, enforce_g2=continuity >= 2, enforce_g3=continuity == 3,
+        te_value=te,
+        requested_smoothness=float(smoothness), requested_continuity=int(continuity),
+        effective_smoothness=effective_smoothness,
+        effective_continuity=effective_continuity,
+        fallback_used=(effective_smoothness != float(smoothness)
+                       or effective_continuity != int(continuity)),
+        enforce_g2=effective_continuity >= 2, enforce_g3=effective_continuity == 3,
         fit_result=result)

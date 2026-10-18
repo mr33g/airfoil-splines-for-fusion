@@ -11,6 +11,11 @@ from airfoil_splines_core import bspline_helper
 from logic import state
 
 
+def _error_decimal_places(default_units):
+    """Use one more digit than the original preview labels."""
+    return 5 if 'in' in default_units else 3
+
+
 def transform_vector_2d_to_world(vec_2d, transform_matrix):
     """
     Transform a 2D vector (rotation only, no translation) to world coordinates.
@@ -146,7 +151,7 @@ def draw_error_labels(graphics_group, upper_curve, lower_curve, u_param_u, u_par
     design = adsk.fusion.Design.cast(app.activeProduct)
     units_mgr = design.unitsManager
     def_units = units_mgr.defaultLengthUnits
-    decimals = 2 if 'in' not in def_units else 4
+    decimals = _error_decimal_places(def_units)
     
     # Text rendering settings
     font_size = 14

@@ -79,12 +79,20 @@ def run_fitter(inputs, is_preview, initialize_te=True):
             initial_count = selected_initial_cp_count()
             values = dict(
                 te=inputs.itemById('te_thickness').value,
-                smoothness=inputs.itemById('smoothness_input').valueOne,
+                smoothness=inputs.itemById('smoothness_input').value,
                 upper_count=state.current_cp_count_upper if state.current_cp_count_upper is not None else initial_count,
                 lower_count=state.current_cp_count_lower if state.current_cp_count_lower is not None else initial_count,
                 continuity=continuity)
-            # Publish cache/state only after the exact requested fit succeeds.
-            state.fit_cache = feature_recipe.fit_data(recipe, values, chord_length)
+            requested_smoothing = values['smoothness']
+            requested_continuity = values['continuity']
+            fitted = feature_recipe.fit_data(recipe, values, chord_length)
+            if fitted.get('fallback_used', False):
+                app.log(
+                    f'AirfoilSplines fit fallback: requested G{requested_continuity} '
+                    f'smoothing={requested_smoothing:g}; using G{values["continuity"]} '
+                    f'smoothing={values["smoothness"]:g}.')
+            # Publish cache/state only after a requested or fallback fit succeeds.
+            state.fit_cache = fitted
             state.current_cp_count_upper = int(values['upper_count'])
             state.current_cp_count_lower = int(values['lower_count'])
             state.needs_refit = False

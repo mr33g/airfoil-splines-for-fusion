@@ -25,6 +25,7 @@ def api_stub():
     adsk.fusion.CustomFeatureEventHandler = type('CustomFeatureEventHandler', (), {})
     adsk.fusion.SketchLine = NS(cast=lambda obj: obj)
     adsk.fusion.Sketch = NS(cast=lambda obj: obj)
+    adsk.fusion.ConstructionPlane = NS(cast=lambda obj: None)
     return adsk
 
 
@@ -107,7 +108,7 @@ class WrappingTests(unittest.TestCase):
             feature.features = history[history.index(first):history.index(last) + 1]
             return True
         data.setStartAndEndFeatures.side_effect = set_range
-        values = {'file_path': 'foil.dat', 'te_thickness': .01}
+        values = {'file_path': 'foil.dat', 'te_thickness': .01, 'smoothness_input': .1}
         inputs = NS(itemById=lambda key: NS(value=values.get(key), valueOne=.1))
         cache = dict(upper_cp_raw=[1, 2], lower_cp_raw=[1, 2], enforce_g3=False, enforce_g2=True)
         module.wrap(sketch, object(), inputs, cache, 0, False)
@@ -143,6 +144,20 @@ class RecipeTests(unittest.TestCase):
         np.testing.assert_allclose(first[0], again[0])
         np.testing.assert_allclose(first[3], again[3])
 
+    def test_default_fit_is_an_eight_point_smoothed_degree_four_bspline(self):
+        count = self.recipe.config.DEFAULT_CP_COUNT
+        data = self.recipe.fit_data(
+            dict(dat=self.dat, schema=1),
+            dict(self.values, smoothness=self.recipe.config.DEFAULT_SMOOTHNESS_PENALTY,
+                 upper_count=count, lower_count=count), 10)
+        self.assertEqual(count, 8)
+        self.assertEqual(self.recipe.config.DEFAULT_SMOOTHNESS_PENALTY, 0.0007)
+        self.assertEqual((data['degree_u'], data['degree_l']), (4, 4))
+        self.assertEqual((len(data['upper_cp_raw']), len(data['lower_cp_raw'])), (8, 8))
+        self.assertEqual((len(data['upper_knots']), len(data['lower_knots'])), (13, 13))
+        self.assertTrue(np.all((data['upper_knots'][5:-5] > 0)
+                               & (data['upper_knots'][5:-5] < 1)))
+
     def test_invalid_parameters_rejected_before_fitting(self):
         for change in (dict(te=-1), dict(upper_count=4.5), dict(lower_count=20),
                        dict(continuity=4), dict(smoothness=float('nan'))):
@@ -166,7 +181,9 @@ class RecipeTests(unittest.TestCase):
         self.assertEqual(self.recipe._fit_cached.cache_info().misses, 1)
         self.assertEqual(self.recipe._fit_cached.cache_info().hits, 1)
         # Changes to every numerical input and to the embedded data must refit.
-        with patch.object(self.recipe, 'BSplineProcessor', wraps=self.recipe.BSplineProcessor) as processor:
+        from airfoil_splines_core import fit_recovery
+        with patch.object(fit_recovery, 'BSplineProcessor',
+                          wraps=self.recipe.BSplineProcessor) as processor:
             for change in (dict(te=0.04), dict(smoothness=0.2), dict(upper_count=9),
                            dict(lower_count=9), dict(continuity=2)):
                 self.recipe.fit(recipe, dict(self.values, **change), 10)
@@ -184,7 +201,7 @@ class RecipeTests(unittest.TestCase):
             with patch('builtins.open', side_effect=AssertionError('Embedded fit must stay in memory')):
                 preview = self.recipe.fit_data(recipe, values, 10)
                 geometry = self.recipe.fit(recipe, values, 10)
-            self.assertEqual((preview['degree_u'], preview['degree_l']), (6, 8))
+            self.assertEqual((preview['degree_u'], preview['degree_l']), (4, 4))
             self.assertEqual(preview['fit_result'].achieved_continuity, continuity)
             np.testing.assert_array_equal(preview['upper_cp_raw'], geometry[0])
             np.testing.assert_array_equal(preview['lower_cp_raw'], geometry[3])
@@ -221,7 +238,7 @@ class FitPreviewIntegrationTests(unittest.TestCase):
         render = Mock()
         line = NS(parentSketch=NS())
         controls = dict(chord_line=NS(selectionCount=1, selection=lambda _: NS(entity=line)),
-                        te_thickness=NS(value=.02), smoothness_input=NS(valueOne=.001),
+                        te_thickness=NS(value=.02), smoothness_input=NS(value=.001),
                         continuity_level=NS(selectedItem=NS(name='G2')),
                         initial_cp_count=NS(value=10))
         modules = {
@@ -261,6 +278,28 @@ class FitPreviewIntegrationTests(unittest.TestCase):
 
 
 class PreviewTests(unittest.TestCase):
+    def test_long_filename_label_keeps_only_the_beginning(self):
+        from utils.ui_text import (SELECTED_FILENAME_MAX_LENGTH, selected_filename_label,
+                                   set_float_input_value)
+
+        label = selected_filename_label('this-is-a-very-long-airfoil-profile-name.dat')
+        self.assertEqual(len(label), SELECTED_FILENAME_MAX_LENGTH)
+        self.assertEqual(label, 'this-is-a-very-long-air…')
+        self.assertEqual(selected_filename_label('short-name.dat'), 'short-name')
+        control = NS(expression='', value=None)
+        set_float_input_value(control, 0.0007)
+        self.assertEqual(control.expression, '0.0007')
+
+    def test_error_labels_use_an_additional_decimal_place(self):
+        adsk = api_stub()
+        logic = ModuleType('logic')
+        logic.state = NS()
+        module = load('fusion_graphics_precision_test', 'logic/fusion_graphics.py', {
+            'adsk': adsk, 'adsk.core': adsk.core, 'adsk.fusion': adsk.fusion,
+            'logic': logic})
+        self.assertEqual(module._error_decimal_places('mm'), 3)
+        self.assertEqual(module._error_decimal_places('in'), 5)
+
     def test_file_replacement_in_edit_preserves_te_and_counts(self):
         adsk = api_stub()
         adsk.core.DialogResults = NS(DialogOK=1)
@@ -290,7 +329,11 @@ class PreviewTests(unittest.TestCase):
         adsk.core.Application = NS(get=lambda: NS(log=log))
         adsk.core.Point3D = NS(create=lambda *xyz: xyz)
         adsk.core.Color = NS(create=lambda *rgba: rgba)
-        adsk.core.NurbsCurve3D = NS(createNonRational=Mock(side_effect=lambda *args: args))
+        def create_curve(*args):
+            evaluator = NS(getStrokes=lambda start, end, tolerance: (
+                True, [NS(x=start, y=0, z=0), NS(x=end, y=0, z=0)]))
+            return NS(evaluator=evaluator, creation_args=args)
+        adsk.core.NurbsCurve3D = NS(createNonRational=Mock(side_effect=create_curve))
         adsk.fusion.CustomGraphicsCoordinates = NS(create=lambda coords: coords)
         adsk.fusion.CustomGraphicsSolidColorEffect = NS(create=lambda color: color)
         adsk.fusion.CustomGraphicsPointTypes = NS(UserDefinedCustomGraphicsPointType=1)
@@ -301,18 +344,34 @@ class PreviewTests(unittest.TestCase):
                       {'adsk': adsk, 'adsk.core': adsk.core, 'adsk.fusion': adsk.fusion,
                        'logic': logic, 'logic.fusion_graphics': NS(draw_error_labels=Mock())})
         # Coordinates have already been transformed into the owning component.
-        coords = [1, 2, 3, 4, 5, 6]
+        coords = [coordinate for i in range(10) for coordinate in (i, i / 10, 0)]
         module._get_world_pts = Mock(return_value=coords)
+        line_graphics = []
+        def add_lines(*args):
+            graphic = NS()
+            line_graphics.append(graphic)
+            return graphic
         group = NS(addCurve=Mock(side_effect=lambda curve: NS()),
-                   addLines=Mock(side_effect=lambda *args: NS()),
+                   addLines=Mock(side_effect=add_lines),
                    addPointSet=Mock(return_value=NS()))
-        cp = [[0, 0], [1, 0]]
-        cache = dict(upper_knots=[0, 0, 1, 1], lower_knots=[0, 0, 1, 1], degree_u=1, degree_l=1)
+        cp = [[i / 9, 0] for i in range(10)]
+        knots = [0, 0, 0, 0, 0, .2, .4, .6, .8, 1, 1, 1, 1, 1]
+        cache = dict(upper_knots=knots, lower_knots=knots, degree_u=4, degree_l=4)
         module.draw_airfoil_curves(group, cp, cp, cache, 10, None)
+        self.assertEqual(group.addLines.call_count, 10)
+        first_surface_coords = [call.args[0] for call in group.addLines.call_args_list[:5]]
+        self.assertEqual([coords[0] for coords in first_surface_coords], [0, .2, .4, .6, .8])
+        self.assertEqual([coords[-3] for coords in first_surface_coords], [.2, .4, .6, .8, 1])
+        self.assertEqual([graphic.color for graphic in line_graphics[:5]],
+                         [module.CURVE_COLORS[i % 2] for i in range(5)])
+        self.assertTrue(all(graphic.depthPriority == module.DEPTH_CURVE
+                            for graphic in line_graphics[:10]))
+        group.addLines.reset_mock()
         # An object with no sketch geometry APIs proves handles need no sketch.
         module.draw_control_polygon(group, cp, cp, 10, None, object(), cp, cp)
-        self.assertEqual(group.addCurve.call_count, 2)
-        self.assertEqual(group.addCurve.call_args.args[0][0], [(1, 2, 3), (4, 5, 6)])
+        self.assertEqual(group.addCurve.call_count, 0)
+        self.assertEqual(group.addLines.call_count, 2)
+        self.assertEqual(adsk.core.NurbsCurve3D.createNonRational.call_count, 2)
         self.assertEqual(group.addPointSet.call_args.args[0], coords + coords)
         log.assert_not_called()
 
@@ -559,7 +618,7 @@ class RecomputeTests(unittest.TestCase):
             self.assertTrue(state.flip_orientation)
             self.assertEqual((state.current_cp_count_upper, state.current_cp_count_lower), (9, 11))
             self.assertEqual(controls['te_thickness'].expression, '0.25 mm')
-            self.assertEqual(controls['smoothness_input'].valueOne, 0.04)
+            self.assertEqual(controls['smoothness_input'].expression, '0.04')
             self.assertTrue(continuity_items[2].isSelected)
             self.assertFalse(controls['chord_line'].isEnabled)
             self.assertFalse(controls['rotate_airfoil'].isEnabled)
@@ -596,6 +655,34 @@ class RecomputeTests(unittest.TestCase):
         self.module.update.assert_not_called()
         feature.attributes.add.assert_not_called()
         self.assertEqual(feature.name, 'User name')
+
+    def test_filename_edit_renames_owned_sketch_and_support_planes(self):
+        helper = NS(name='old - sketch support', nativeObject=None)
+        angled = NS(name='old', nativeObject=None)
+        self.sketch.name = 'old'
+        self.feature.features = [helper, angled, self.sketch]
+        self.feature.parameters = NS(itemById=lambda _: NS(expression='0.2 mm'))
+        self.feature.attributes = NS(add=Mock())
+        self.feature.name = 'Airfoil Splines - old'
+        self.module.adsk.fusion.Sketch = NS(
+            cast=lambda entity: entity if entity is self.sketch else None)
+        self.module.adsk.fusion.ConstructionPlane = NS(
+            cast=lambda entity: entity if entity in (helper, angled) else None)
+        self.recipe.PARAMETERS = [('te', 'TE', 'mm')]
+        self.recipe.encode = Mock(return_value='encoded')
+        self.module.update = Mock()
+        original = dict(dat='embedded', rotation=0, flip=False, filename='old.dat')
+        changed = dict(original, filename='new-foil.dat')
+        values = dict(te=0.02)
+
+        self.module.apply_edit(
+            self.feature, original, values, changed, dict(values), '0.2 mm')
+
+        self.module.update.assert_not_called()
+        self.assertEqual(self.sketch.name, 'new-foil')
+        self.assertEqual(angled.name, 'new-foil')
+        self.assertEqual(helper.name, 'new-foil - sketch support')
+        self.assertEqual(self.feature.name, 'Airfoil Splines - new-foil')
 
     def test_equal_curve_check_preserves_parameter_direction(self):
         curve = NS(degree=1, isClosed=False, isPeriodic=False, isRational=False,

@@ -19,7 +19,10 @@ _addin_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPTH_COMB = -100
 DEPTH_RAW = 0
 DEPTH_CONTROL = 10
+DEPTH_CURVE = 20
 DEPTH_ERROR = 1000
+
+CURVE_COLORS = ((0, 160, 255, 255), (190, 60, 255, 255))
 
 
 def _get_world_pts(cp_list, chord_length, airfoil_to_world):
@@ -110,18 +113,64 @@ def draw_control_polygon(graphics_group, upper_cp, lower_cp, chord_length,
     return upper_coords, lower_coords
 
 
+def _knot_spans(knots, degree):
+    """Return the non-zero parameter intervals in a clamped knot vector."""
+    active_knots = [float(value) for value in knots[degree:len(knots) - degree]]
+    return [(start, end) for start, end in zip(active_knots, active_knots[1:])
+            if end - start > 1e-12]
+
+
+def _draw_colored_spans(graphics_group, curve, knots, degree, tolerance):
+    """Stroke each exact knot span and alternate its preview color."""
+    strokes = []
+    evaluator = curve.evaluator
+    for start, end in _knot_spans(knots, degree):
+        success, points = evaluator.getStrokes(start, end, tolerance)
+        if not success or len(points) < 2:
+            return False
+        coords = [coordinate for point in points for coordinate in (point.x, point.y, point.z)]
+        strokes.append(coords)
+
+    if not strokes:
+        return False
+
+    for index, coords in enumerate(strokes):
+        point_count = len(coords) // 3
+        graphic = graphics_group.addLines(
+            adsk.fusion.CustomGraphicsCoordinates.create(coords),
+            _create_line_indices(point_count), True)
+        if graphic:
+            graphic.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                adsk.core.Color.create(*CURVE_COLORS[index % len(CURVE_COLORS)]))
+            graphic.depthPriority = DEPTH_CURVE
+    return True
+
+
 def draw_airfoil_curves(graphics_group, upper_cp, lower_cp, fit_cache,
                        chord_length, airfoil_to_world):
-    """Draw exact transient NURBS without modifying any sketch or timeline."""
+    """Draw transient NURBS with alternating colors at exact knot boundaries."""
+    app = adsk.core.Application.get()
+    tolerance = max(abs(chord_length) * 1e-5, 1e-6)
     for cp, knot_key, degree_key in ((upper_cp, 'upper_knots', 'degree_u'),
                                       (lower_cp, 'lower_knots', 'degree_l')):
         coords = _get_world_pts(cp, chord_length, airfoil_to_world)
         points = [adsk.core.Point3D.create(*coords[i:i + 3]) for i in range(0, len(coords), 3)]
         curve = adsk.core.NurbsCurve3D.createNonRational(
             points, fit_cache[degree_key], list(fit_cache[knot_key]), False)
+        try:
+            if _draw_colored_spans(
+                    graphics_group, curve, fit_cache[knot_key],
+                    fit_cache[degree_key], tolerance):
+                continue
+        except Exception as exc:
+            app.log(f'Could not draw colored B-spline spans: {exc}')
+
+        # Older Fusion builds or evaluator failures still get the exact curve preview.
         graphic = graphics_group.addCurve(curve)
-        graphic.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
-            adsk.core.Color.create(0, 160, 255, 255))
+        if graphic:
+            graphic.color = adsk.fusion.CustomGraphicsSolidColorEffect.create(
+                adsk.core.Color.create(*CURVE_COLORS[0]))
+            graphic.depthPriority = DEPTH_CURVE
 
 
 def draw_trailing_edge_line(graphics_group, upper_coords, lower_coords, is_sharp):

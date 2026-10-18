@@ -8,6 +8,7 @@ import adsk.fusion
 
 from logic import feature_recipe
 from logic.airfoil_frame import chord_frame, sketch_points
+from utils.ui_text import selected_filename_label, set_float_input_value
 
 
 # AirfoilSplines owns its feature data independently of the legacy add-in.
@@ -100,7 +101,7 @@ def wrap(sketch, line, inputs, cache, rotation, flip, *, supports=()):
     recipe = dict(feature_recipe.read_source(path), schema=feature_recipe.SCHEMA,
                   rotation=int(rotation), flip=bool(flip))
     values = dict(te=inputs.itemById('te_thickness').value,
-                  smoothness=inputs.itemById('smoothness_input').valueOne,
+                  smoothness=inputs.itemById('smoothness_input').value,
                   upper_count=len(cache['upper_cp_raw']), lower_count=len(cache['lower_cp_raw']),
                   continuity=3 if cache['enforce_g3'] else 2 if cache['enforce_g2'] else 1)
     native = sketch.nativeObject or sketch
@@ -146,6 +147,19 @@ def output_sketch(feature):
         if sketch and _role(sketch) == 'output':
             return sketch.nativeObject or sketch
     raise RuntimeError('The AirfoilSplines output sketch is missing.')
+
+
+def _rename_outputs(feature, filename):
+    """Rename only the sketch and support planes owned by this custom feature."""
+    name = os.path.splitext(os.path.basename(filename))[0]
+    output_sketch(feature).name = name
+    for entity in feature.features:
+        plane = adsk.fusion.ConstructionPlane.cast(_native(entity))
+        if not plane:
+            continue
+        suffix = ' - sketch support' if plane.name.endswith(' - sketch support') else ''
+        plane.name = name + suffix
+    feature.name = 'Airfoil Splines - ' + name
 
 
 def _role(entity):
@@ -248,7 +262,7 @@ def apply_edit(feature, original_recipe, original_values, recipe, values, te_exp
         elif values[name] != original_values[name]:
             parameter.value = values[name]
     if recipe['filename'] != original_recipe['filename']:
-        feature.name = 'Airfoil Splines - ' + os.path.splitext(recipe['filename'])[0]
+        _rename_outputs(feature, recipe['filename'])
 
 
 def update(feature, recipe=None, values=None, *, apply=True):
@@ -397,7 +411,7 @@ class EditSession:
         Path(self.path).write_text(self.recipe['dat'])
         state.reset_state()
         command.setDialogSize(300, 0)
-        create_ui_inputs(command.commandInputs, smoothness_max=max(0.1, self.values['smoothness']))
+        create_ui_inputs(command.commandInputs)
         self.sketch = output_sketch(feature)
         self.visible = self.sketch.isLightBulbOn
 
@@ -411,7 +425,7 @@ class EditSession:
             raise RuntimeError('The AirfoilSplines chord reference is missing.')
         inputs.itemById('chord_line').addSelection(dependency.entity)
         inputs.itemById('file_path').value = self.path
-        inputs.itemById('select_file').text = os.path.splitext(self.recipe['filename'])[0]
+        inputs.itemById('select_file').text = selected_filename_label(self.recipe['filename'])
         state.rotation_state = self.recipe['rotation']
         state.flip_orientation = self.recipe['flip']
         state.current_cp_count_upper = int(self.values['upper_count'])
@@ -420,7 +434,7 @@ class EditSession:
         te.maximumValue = max(te.maximumValue, self.values['te'])
         te.expression = self.feature.parameters.itemById('te').expression
         smoothness = inputs.itemById('smoothness_input')
-        smoothness.valueOne = self.values['smoothness']
+        set_float_input_value(smoothness, self.values['smoothness'])
         items = inputs.itemById('continuity_level').listItems
         items.item(int(self.values['continuity']) - 1).isSelected = True
         update_cp_count_labels(inputs)
@@ -486,7 +500,7 @@ class EditSession:
                     recipe['flip'] = state.flip_orientation
                     values = dict(
                         te=inputs.itemById('te_thickness').value,
-                        smoothness=inputs.itemById('smoothness_input').valueOne,
+                        smoothness=inputs.itemById('smoothness_input').value,
                         upper_count=state.current_cp_count_upper,
                         lower_count=state.current_cp_count_lower,
                         continuity=int(inputs.itemById('continuity_level').selectedItem.name[1:]))
