@@ -1,8 +1,8 @@
 # Airfoil Splines Add-In for Fusion
 
-A Fusion add-in that imports airfoil coordinate data from `.dat` files and fits optimized BÃ©zier curves to it. The generated splines are aligned to the selected sketch line. The result maintains smooth curvature and geometric continuity at the leading edge and can be used immediately for lofts, sweeps, and other CAD operations.
+A Fusion add-in that imports airfoil coordinate data from `.dat` files and fits optimized Bézier curves to it. The generated splines are aligned to the selected sketch line. The result maintains smooth curvature and geometric continuity at the leading edge and can be used immediately for lofts, sweeps, and other CAD operations.
 
-Airfoil Splines brings the shared B-spline fitting library into Fusion with editable parametric features.
+Airfoil Splines builds on the Airfoil Fitter add-in with more advanced, editable parametric features that can update when their source geometry changes. These API features are still experimental, Airfoil Fitter remains available as a stable alternative.
 
 ## Parametric Version
 
@@ -10,29 +10,40 @@ Each insertion creates one Airfoil Splines timeline feature containing its outpu
 sketch and any required construction planes. Right-click it and choose **Edit
 Feature** to change the settings.
 
-The feature embeds the source `.dat` contents in the design. Moving or deleting
-the original file does not remove that data; editing the file externally does
-not automatically update the feature. Select the changed file in Edit Feature
+The feature embeds the source `.dat` contents in the design. Moving or deleting the original `.dat` does not remove that data, editing the file externally does not automatically update the feature. Select the changed file in Edit Feature
 to use it. Keep the add-in installed and running to edit or recompute these
 custom features. Design history must be enabled for parametric features.
 
-With design history disabled, the same fitting controls create an ordinary
-sketch with fixed splines and a trailing-edge closing line when needed.
+With design history disabled, the add-in behaves like the legacy Airfoil Fitter and creates an ordinary sketch.
 
 Previously inserted airfoils remain ordinary sketches. Installing this version
 does not convert them into editable Airfoil Splines timeline features.
 
+## Known Issues
+
+- **Experimental:** Parametric Airfoil Splines features use Fusion's preview
+  Custom Features API. API limitations and changes can affect editing,
+  recomputation, and downstream geometry. Keep backups of your designs and
+  test changes on a copy before relying on them in an important project.
+  If you prefer the established non-parametric workflow,
+  [Airfoil Fitter](https://apps.autodesk.com/FUSION/en/Detail/Index?id=7312110669169312529&appLang=en&os=Win64)
+  remains available as an alternative.
+
+- **Missing Edit Feature in Part designs:** Reproduced in Fusion 2705.1.30.
+  Fusion omits the custom feature edit command from the timeline context menu
+  in Part designs. Changing the design type to
+  **Hybrid** in Document Settings restores the menu entry. Use Hybrid designs
+  when you need to edit inserted airfoils. This is separate from enabling
+  parametric design history.
+
 ## Installation
 
-The Airfoil Splines App Store listing is being prepared. The following link is
-for the legacy add-in release:
-https://apps.autodesk.com/FUSION/en/Detail/Index?id=7312110669169312529&appLang=en&os=Win64
+Download Airfoil Splines from the
+[Autodesk App Store](https://marketplace.autodesk.com/apps/1f92d340-99c6-42d7-8546-547ef65eeee2?priceId=8c477238-e9e6-4774-b727-8b03f5f5f8ff).
 
 ### MSI Installer (Windows)
 
-Uninstall legacy add-in (AF) before installing Airfoil Splines (AS). The
-installer checks for AF and asks you to remove it first because the two add-ins
-cannot be used together.
+Uninstall legacy add-in (AF) before installing Airfoil Splines (AS).
 
 - **File**: `AirfoilSplines-<version>.msi`
 1. Close Fusion
@@ -40,14 +51,31 @@ cannot be used together.
 3. Start Fusion & confirm dependency installation
 4. Restart Fusion
 
-### Manual Installation (Windows)
+### Running from Source (Windows)
 
-1. Download or clone this repository
-2. Copy the `AirfoilSplines` folder to your Fusion add-ins directory:
-   - **Windows**: `%APPDATA%\Autodesk\Autodesk Fusion\API\AddIns\`
-3. Go to **Utilities â†’ Add-Ins â†’ Scripts and Add-Ins** and enable **Airfoil Splines**
-4. Confirm dependency installation
-5. Restart Fusion
+For development, run the add-in directly from its checkout and link the shared
+core sources so you can edit both projects without rebuilding or reinstalling Python packages.
+
+1. Clone `airfoil-splines-for-fusion` and `airfoil-splines-core` into sibling
+   folders.
+2. From the `airfoil-splines-for-fusion` folder, create a directory junction to
+   the core's Python package:
+
+   ```powershell
+   New-Item -ItemType Directory -Path .\_vendor -Force
+   New-Item -ItemType Junction -Path .\_vendor\airfoil_splines_core -Target (Resolve-Path ..\airfoil-splines-core\src\airfoil_splines_core).Path
+   ```
+
+   The link must point to the package
+   under `src`, not the core repository root.
+3. In Fusion's **Utilities → Add-Ins → Scripts and Add-Ins**, add the existing
+   add-in by selecting the checkout folder containing `AirfoilSplines.py` and
+   `AirfoilSplines.manifest`, then run it.
+4. Confirm installation of numpy and scipy if prompted, then restart Fusion.
+
+The add-in puts `_vendor` on its Python import path, so the junction makes it import the core source files directly. An installed core package is not needed for this setup. Changes to either project require reloading the imported Python modules.
+
+`python setup/prepare_core.py` is for bundling a release copy of the core. It replaces `_vendor`, including a development junction, so do not run it when you want to keep using the linked sources.
 
 ## Usage
 
@@ -56,7 +84,7 @@ cannot be used together.
 3. **Select the chord line** in your sketch
 4. **Select an airfoil file** (`.dat` format)
 5. **Position the airfoil**:
-   - Use **Rotate 90Â°** to orient the airfoil plane relative to the chord line
+   - Use **Rotate 90°** to orient the airfoil plane relative to the chord line
    - Use **Flip** to reverse nose/tail direction
    - Use **TE Thickness** manipulator to adjust trailing edge thickness
    - Preview is automatically displayed when both chord line and file are selected
@@ -91,7 +119,7 @@ cannot be used together.
 ### Geometry Placement
 - **Chord line selection**: Select any sketch line to define the chord position and length
 - **Automatic scaling**: Airfoil is scaled to match the selected chord line length
-- **Rotation**: Rotate the airfoil plane in 90Â° increments around the chord line (0Â°, 90Â°, 180Â°, 270Â°)
+- **Rotation**: Rotate the airfoil plane in 90° increments around the chord line (0°, 90°, 180°, 270°)
 - **Flip orientation**: Reverse the nose-to-tail direction along the chord line
 - **Trailing edge thickness**: Add symmetric trailing edge thickness with minimal distortion of the airfoil.
 
@@ -174,7 +202,7 @@ Michael Reeg
 
 ## Changelog
 
-### Unreleased â€” parametric prototype
+### Unreleased — parametric prototype
 - Airfoil Splines timeline features with embedded source data and editable fitting settings.
 - Preserve spline entities during normal edits to retain downstream references.
 - Support face sketches and moved component occurrences; graphics-only previews.

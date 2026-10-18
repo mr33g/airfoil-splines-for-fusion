@@ -7,7 +7,8 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
      xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
-    <Package Name="Airfoil Splines"
+    <!-- Windows Installed Apps name; keep the MSI filename and Fusion branding unchanged. -->
+    <Package Name="Airfoil Splines for Fusion"
              Manufacturer="Michael Reeg"
              Version="$(var.Version)"
              UpgradeCode="9BFBAD03-1660-4623-B260-D14E575ED458"
