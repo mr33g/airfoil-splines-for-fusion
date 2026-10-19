@@ -91,7 +91,7 @@ The add-in puts `_vendor` on its Python import path, so the junction makes it im
 6. **Adjust fitting parameters**:
    - **Initial Control Point Count**: The default is 8. Additional points can be inserted independently on the upper and lower surfaces when needed.
    - **Control Point Count**: More points = higher accuracy but might introduce oscillations
-   - **Smoothness**: Defaults to 0.0007. Higher values produce smoother control polygons at the cost of accuracy.
+   - **Smoothness**: The default is 7. Higher values produce smoother control polygons at the cost of accuracy.
    - **LE Continuity**: Default is G2, if the curvature near the leading edge is not smooth ehough, G3 can be enforced additionally. G1 is available as a fallback.
 
 7. **Curvature Comb**: analyze the airfoil's curvature in the preview.

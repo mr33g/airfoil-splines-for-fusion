@@ -3,7 +3,7 @@ import traceback
 from logic import state
 import airfoil_splines_settings as config
 from utils.i18n import t
-from utils.ui_text import selected_filename_label, set_float_input_value
+from utils.ui_text import selected_filename_label
 
 def create_ui_inputs(inputs):
     """Defines all the UI controls for the Fusion Fitter command."""
@@ -71,13 +71,13 @@ def create_ui_inputs(inputs):
         cp_count_lower.text = f'  {state.current_cp_count_lower if state.current_cp_count_lower is not None else config.DEFAULT_CP_COUNT}'
         cp_count_lower.isVisible = False
 
-        # Smoothness penalty
-        smoothness = groupFitterSettingsChildInputs.addFloatSpinnerCommandInput(
-            'smoothness_input', t("smoothness_penalty"), "",
-            config.MIN_SMOOTHNESS_PENALTY, config.MAX_SMOOTHNESS_PENALTY,
-            config.SMOOTHNESS_PENALTY_STEP, config.DEFAULT_SMOOTHNESS_PENALTY
+        # Human-friendly 0..100 scale; each UI step is a fitter weight of 0.0001.
+        smoothness = groupFitterSettingsChildInputs.addIntegerSliderCommandInput(
+            'smoothness_input', t("smoothness_penalty"),
+            config.MIN_SMOOTHNESS_UI, config.MAX_SMOOTHNESS_UI,
+            False
         )
-        set_float_input_value(smoothness, config.DEFAULT_SMOOTHNESS_PENALTY)
+        smoothness.valueOne = config.DEFAULT_SMOOTHNESS_UI
         smoothness.isVisible = False
 
         # Options (Initially Hidden)

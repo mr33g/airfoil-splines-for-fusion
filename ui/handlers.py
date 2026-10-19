@@ -6,7 +6,7 @@ from logic import state
 from logic.fitter import run_fitter
 import airfoil_splines_settings as config
 from utils.i18n import t
-from utils.ui_text import selected_filename_label, set_float_input_value
+from utils.ui_text import selected_filename_label, set_smoothing_input_value
 
 def _set_selected_file_button_text(inputs, file_path: str) -> None:
     try:
@@ -74,7 +74,7 @@ def reset_fitter_settings_to_defaults(inputs, resetAll=False):
             # Reset soothness penalty
             smoothness = inputs.itemById('smoothness_input')
             if smoothness:
-                set_float_input_value(smoothness, config.DEFAULT_SMOOTHNESS_PENALTY)
+                set_smoothing_input_value(smoothness, config.DEFAULT_SMOOTHNESS_PENALTY)
 
             # Reset to the application continuity default
             continuity_dropdown = inputs.itemById('continuity_level')

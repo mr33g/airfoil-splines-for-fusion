@@ -8,7 +8,8 @@ import adsk.fusion
 
 from logic import feature_recipe
 from logic.airfoil_frame import chord_frame, sketch_points
-from utils.ui_text import selected_filename_label, set_float_input_value
+from utils.ui_text import (selected_filename_label, set_smoothing_input_value,
+                           smoothing_from_input)
 
 
 # AirfoilSplines owns its feature data independently of the legacy add-in.
@@ -101,7 +102,7 @@ def wrap(sketch, line, inputs, cache, rotation, flip, *, supports=()):
     recipe = dict(feature_recipe.read_source(path), schema=feature_recipe.SCHEMA,
                   rotation=int(rotation), flip=bool(flip))
     values = dict(te=inputs.itemById('te_thickness').value,
-                  smoothness=inputs.itemById('smoothness_input').value,
+                  smoothness=smoothing_from_input(inputs.itemById('smoothness_input')),
                   upper_count=len(cache['upper_cp_raw']), lower_count=len(cache['lower_cp_raw']),
                   continuity=3 if cache['enforce_g3'] else 2 if cache['enforce_g2'] else 1)
     native = sketch.nativeObject or sketch
@@ -434,7 +435,7 @@ class EditSession:
         te.maximumValue = max(te.maximumValue, self.values['te'])
         te.expression = self.feature.parameters.itemById('te').expression
         smoothness = inputs.itemById('smoothness_input')
-        set_float_input_value(smoothness, self.values['smoothness'])
+        set_smoothing_input_value(smoothness, self.values['smoothness'])
         items = inputs.itemById('continuity_level').listItems
         items.item(int(self.values['continuity']) - 1).isSelected = True
         update_cp_count_labels(inputs)
@@ -500,7 +501,7 @@ class EditSession:
                     recipe['flip'] = state.flip_orientation
                     values = dict(
                         te=inputs.itemById('te_thickness').value,
-                        smoothness=inputs.itemById('smoothness_input').value,
+                        smoothness=smoothing_from_input(inputs.itemById('smoothness_input')),
                         upper_count=state.current_cp_count_upper,
                         lower_count=state.current_cp_count_lower,
                         continuity=int(inputs.itemById('continuity_level').selectedItem.name[1:]))

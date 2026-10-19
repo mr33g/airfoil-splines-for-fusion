@@ -41,7 +41,7 @@ class DirectModelingTests(unittest.TestCase):
             file_path=NS(value='foil.dat'), te_thickness=NS(value=gap),
             continuity_level=NS(selectedItem=NS(name='G2')),
             initial_cp_count=NS(value=5),
-            smoothness_input=NS(value=.001))
+            smoothness_input=NS(valueOne=10))
         self.inputs = NS(itemById=controls.get)
         self.cache = dict(upper_cp_raw=np.array([[0.,0.],[1.,gap/2]]),
                           lower_cp_raw=np.array([[0.,0.],[1.,-gap/2]]),

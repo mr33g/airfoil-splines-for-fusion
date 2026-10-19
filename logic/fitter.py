@@ -12,6 +12,7 @@ from airfoil_splines_core import bspline_helper
 from utils.sketch_plane_helper import AirfoilPlaneError, resolve_airfoil_plane, add_airfoil_sketch
 from logic.preview_renderer import render_preview
 from utils.i18n import t
+from utils.ui_text import smoothing_from_input
 
 
 def run_fitter(inputs, is_preview, initialize_te=True):
@@ -79,7 +80,7 @@ def run_fitter(inputs, is_preview, initialize_te=True):
             initial_count = selected_initial_cp_count()
             values = dict(
                 te=inputs.itemById('te_thickness').value,
-                smoothness=inputs.itemById('smoothness_input').value,
+                smoothness=smoothing_from_input(inputs.itemById('smoothness_input')),
                 upper_count=state.current_cp_count_upper if state.current_cp_count_upper is not None else initial_count,
                 lower_count=state.current_cp_count_lower if state.current_cp_count_lower is not None else initial_count,
                 continuity=continuity)

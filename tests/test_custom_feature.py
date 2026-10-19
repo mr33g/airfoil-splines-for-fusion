@@ -108,8 +108,8 @@ class WrappingTests(unittest.TestCase):
             feature.features = history[history.index(first):history.index(last) + 1]
             return True
         data.setStartAndEndFeatures.side_effect = set_range
-        values = {'file_path': 'foil.dat', 'te_thickness': .01, 'smoothness_input': .1}
-        inputs = NS(itemById=lambda key: NS(value=values.get(key), valueOne=.1))
+        values = {'file_path': 'foil.dat', 'te_thickness': .01, 'smoothness_input': 10}
+        inputs = NS(itemById=lambda key: NS(value=values.get(key), valueOne=values.get(key)))
         cache = dict(upper_cp_raw=[1, 2], lower_cp_raw=[1, 2], enforce_g3=False, enforce_g2=True)
         module.wrap(sketch, object(), inputs, cache, 0, False)
         self.assertEqual(feature.features, [native])
@@ -238,7 +238,7 @@ class FitPreviewIntegrationTests(unittest.TestCase):
         render = Mock()
         line = NS(parentSketch=NS())
         controls = dict(chord_line=NS(selectionCount=1, selection=lambda _: NS(entity=line)),
-                        te_thickness=NS(value=.02), smoothness_input=NS(value=.001),
+                        te_thickness=NS(value=.02), smoothness_input=NS(valueOne=10),
                         continuity_level=NS(selectedItem=NS(name='G2')),
                         initial_cp_count=NS(value=10))
         modules = {
@@ -289,6 +289,19 @@ class PreviewTests(unittest.TestCase):
         control = NS(expression='', value=None)
         set_float_input_value(control, 0.0007)
         self.assertEqual(control.expression, '0.0007')
+
+    def test_smoothing_slider_maps_integer_values_to_fitter_weights(self):
+        import airfoil_splines_settings as config
+        from utils.ui_text import set_smoothing_input_value, smoothing_from_input
+
+        control = NS(valueOne=None)
+        for ui_value, weight in ((0, 0.0), (1, 0.0001), (7, 0.0007), (100, 0.01)):
+            with self.subTest(ui_value=ui_value):
+                set_smoothing_input_value(control, weight)
+                self.assertEqual(control.valueOne, ui_value)
+                self.assertEqual(smoothing_from_input(control), weight)
+        self.assertEqual((config.MIN_SMOOTHNESS_UI, config.MAX_SMOOTHNESS_UI,
+                          config.DEFAULT_SMOOTHNESS_UI), (0, 100, 7))
 
     def test_error_labels_use_an_additional_decimal_place(self):
         adsk = api_stub()
@@ -597,7 +610,7 @@ class RecomputeTests(unittest.TestCase):
         session.feature.parameters = NS(itemById=lambda _: NS(expression='0.25 mm'))
         session.feature.timelineObject = NS(rollTo=Mock())
         session.recipe = dict(rotation=3, flip=True, filename='embedded.dat')
-        session.values = dict(te=0.025, smoothness=0.04, upper_count=9, lower_count=11, continuity=3)
+        session.values = dict(te=0.025, smoothness=0.004, upper_count=9, lower_count=11, continuity=3)
         session.path = 'temporary/embedded.dat'
         session.sketch = NS(isLightBulbOn=True)
         session.visible = True
@@ -618,7 +631,7 @@ class RecomputeTests(unittest.TestCase):
             self.assertTrue(state.flip_orientation)
             self.assertEqual((state.current_cp_count_upper, state.current_cp_count_lower), (9, 11))
             self.assertEqual(controls['te_thickness'].expression, '0.25 mm')
-            self.assertEqual(controls['smoothness_input'].expression, '0.04')
+            self.assertEqual(controls['smoothness_input'].valueOne, 40)
             self.assertTrue(continuity_items[2].isSelected)
             self.assertFalse(controls['chord_line'].isEnabled)
             self.assertFalse(controls['rotate_airfoil'].isEnabled)
