@@ -71,6 +71,12 @@ class CountControlsTests(unittest.TestCase):
         self.assertEqual(self.controls['cp_count_upper'].writes, 1)
         self.assertEqual(self.controls['cp_count_lower'].writes, 1)
 
+    def test_continuity_change_preserves_last_valid_fit_until_refit(self):
+        cached = self.state.fit_cache
+        self.handler.handle(None, self.inputs, 'continuity_level')
+        self.assertIs(self.state.fit_cache, cached)
+        self.assertTrue(self.state.needs_refit)
+
     def test_clicked_counts_reach_the_common_fitter_unchanged(self):
         from logic import feature_recipe
         x = (1 - np.cos(np.linspace(0, np.pi, 61))) / 2

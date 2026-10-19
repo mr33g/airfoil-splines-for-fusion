@@ -18,7 +18,9 @@ BASE_EXCLUDED_DIRS = {
     '.idea',        # Don't include JetBrains IDE settings
     '.claude',
     '.github',
-    'res'
+    'res',
+    'doc',
+    'out',
 }
 
 # Directories that may be created at runtime and need cleanup on uninstall

@@ -198,9 +198,6 @@ class AirfoilSplinesCommandInputChangedHandler(adsk.core.InputChangedEventHandle
                         state.needs_refit = True
 
             elif changed_id in ['continuity_level', 'smoothness_input', 'cp_count_upper', 'cp_count_lower']:
-                if changed_id in ['continuity_level']:
-                    state.fit_cache = {}
-
                 # Correct CP count values before triggering refit
                 if changed_id =='cp_count_upper' and state.current_cp_count_upper is not None:
                     state.current_cp_count_upper = min(config.MAX_CP_COUNT, state.current_cp_count_upper + 1)
