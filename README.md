@@ -1,6 +1,6 @@
 # Airfoil Splines Add-In for Fusion
 
-A Fusion add-in that imports airfoil coordinate data from `.dat` files and fits optimized Bézier curves to it. The generated splines are aligned to the selected sketch line. The result maintains smooth curvature and geometric continuity at the leading edge and can be used immediately for lofts, sweeps, and other CAD operations.
+A Fusion add-in that imports airfoil coordinate data from `.dat` files and fits optimized B-spline curves to it. The generated splines are aligned to the selected sketch line. The result maintains smooth curvature and geometric continuity at the leading edge and can be used immediately for lofts, sweeps, and other CAD operations.
 
 Airfoil Splines builds on the Airfoil Fitter add-in with more advanced, editable parametric features that can update when their source geometry changes. These API features are still experimental, Airfoil Fitter remains available as a stable alternative.
 
@@ -10,8 +10,7 @@ Each insertion creates one Airfoil Splines timeline feature containing its outpu
 sketch and any required construction planes. Right-click it and choose **Edit
 Feature** to change the settings.
 
-The feature embeds the source `.dat` contents in the design. Moving or deleting the original `.dat` does not remove that data, editing the file externally does not automatically update the feature. Select the changed file in Edit Feature
-to use it. Keep the add-in installed and running to edit or recompute these
+The feature embeds the source `.dat` contents in the design. Moving or deleting the original `.dat` does not remove that data, editing the file externally does not automatically update the feature. Select the changed file in Edit Feature to use it. Keep the add-in installed and running to edit or recompute these
 custom features. Design history must be enabled for parametric features.
 
 With design history disabled, the add-in behaves like the legacy Airfoil Fitter and creates an ordinary sketch.
