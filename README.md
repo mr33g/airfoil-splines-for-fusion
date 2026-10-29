@@ -201,73 +201,29 @@ Michael Reeg
 
 ## Changelog
 
-### Unreleased — parametric prototype
-- Airfoil Splines timeline features with embedded source data and editable fitting settings.
-- Preserve spline entities during normal edits to retain downstream references.
-- Support face sketches and moved component occurrences; graphics-only previews.
-- Remove the adjustable DXF workflow and the ezdxf dependency.
-- Known issue: the reported wing design may require Compute All after upstream changes.
+### v1.1.0 (2026-10-27)
 
-### v1.2.0
-- Improved Error Objective
-- Configurable initial control point count
-- Improved smoothing
-- UI Updates
-- Various fixes
+- Changed the fitted representation from single-span curves to degree-4,
+  multi-span B-spline curves.
+- Added alternating knot-span colors to the preview for easier segment
+  inspection.
+- Added automatic fit recovery with zero-smoothing and G1 fallbacks.
+- Changed the default control point count from 10 to 8 and the default
+  smoothing weight from 0.001 to 0.0007.
+- Replaced the raw smoothing-weight input with a human-friendly 0–100 slider.
+- Kept the last valid preview visible while continuity changes are refitted.
 
-### v1.1.7
-- Italian language support (Thanks Mirko!)
-- Changed reference plane handling
-- Fixed TE normalization
+### v1.0.0 (2026-10-03)
 
-### v1.1.6 (2026-03-18)
-- Fixed Reference plane bug
-
-### v1.1.5 (2026-02-16)
-- Performance optimizations
-
-### v1.1.4 (2026-02-10)
-- German language support
-- UI Improvements
-- Better default settings
-
-### v1.1.3 (2026-02-06)
-- Improved Input Normalization 
-- Fixed MacOS package, removed .pyc and .pyo files
-- Fixed deinstall on drives other than c:
-- Improved TE thickening
-
-### v1.1.2 (2026-01-23)
-- Experimental bundle for MacOS
-- Removed bundled installer for Windows
-- Improved handling of thickened trailing edges
-- Avoid creation of unnecessary planes
-- Fix dependency updates
-- README updates
-
-### v1.1.1 (2026-01-21)
-- Fixed DXF import alignment
-- Fixed sub-component bug
-- Added privacy policy
-- Fixed the installer
-
-### v1.1.0 (2026-01-11)
-- Added curvature comb visualization
-- Separate control point count controls for upper/lower surfaces
-- Improved knot insertion algorithm
-- New error display
-- UI improvements
-- Improved error handling and stage management
-
-### v1.0.2 (2026-01-03)
-- Optional static libs support
-
-### v1.0.1 (2026-01-03)
-- Fixed installer progress dialogs
-- Deinstaller now removes all files
-
-### v1.0 (2026-01-01)
-- Initial release
+- Initial Airfoil Splines release, split from the legacy Airfoil Fitter add-in.
+- Added parametric timeline features with embedded source data and editable
+  fitting settings.
+- Preserved spline entities during normal edits to retain downstream references.
+- Added support for face sketches and moved component occurrences with
+  graphics-only previews.
+- Removed the adjustable DXF workflow and the `ezdxf` dependency.
+- Known issue: the reported wing design may require **Compute All** after
+  upstream changes.
 
 ## Shared fitting library
 
