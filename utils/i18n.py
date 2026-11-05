@@ -21,6 +21,13 @@ STRINGS = {
             "Resilient installation failed: {error}\n\n"
             "Please manually install dependencies."
         ),
+        "deps_bundle_failed": (
+            "The bundled macOS libraries could not be loaded.\n\n"
+            "Python: {python_version}\n"
+            "Architecture: {architecture}\n"
+            "Library folder: {lib_dir}\n\n"
+            "Please send this complete diagnostic to the developer:\n\n{error}"
+        ),
         "cmd_button_name": "Insert Airfoil",
         "cmd_button_desc": "Fit a spline to an airfoil .dat file in Selig or Lednicer format",
         "failed_to_start": "Failed to start:\n{error}",

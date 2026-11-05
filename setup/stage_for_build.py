@@ -11,6 +11,7 @@ import fnmatch
 # Directories to exclude from staging
 EXCLUDED_DIRS = {
     'lib',           # Dependencies - will be installed separately
+    '_vendor',       # Generated shared core - will be installed separately
     'setup',         # Build scripts and artifacts
     '.git',          # Git repository
     '.github',       # GitHub workflows and CI/CD files

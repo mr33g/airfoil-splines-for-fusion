@@ -2,6 +2,7 @@ import adsk.core, adsk.fusion, adsk.cam, traceback
 import os
 import sys
 import json
+import platform
 import re
 import urllib.request
 
@@ -16,10 +17,12 @@ _update_check_attempted = False
 if addin_dir not in sys.path:
     sys.path.insert(0, addin_dir)
 
+from utils.dependency_paths import bundled_dependency_dir
+
 vendor_dir = os.path.join(addin_dir, '_vendor')
 if vendor_dir not in sys.path:
     sys.path.insert(0, vendor_dir)
-lib_dir = os.path.join(addin_dir, 'lib')
+lib_dir = bundled_dependency_dir(addin_dir)
 if lib_dir not in sys.path:
     sys.path.insert(0, lib_dir)
 
@@ -106,9 +109,22 @@ def ensure_dependencies():
         import scipy
         return True
     except ImportError:
-        pass
+        import_error = traceback.format_exc()
 
     ui = adsk.core.Application.get().userInterface
+    if sys.platform == 'darwin' and os.path.basename(lib_dir).startswith('macos-'):
+        ui.messageBox(
+            t(
+                "deps_bundle_failed",
+                python_version=sys.version,
+                architecture=platform.machine(),
+                lib_dir=lib_dir,
+                error=import_error,
+            ),
+            t("deps_missing_title"),
+        )
+        return False
+
     res = ui.messageBox(
         t("deps_missing_msg"),
         t("deps_missing_title"),

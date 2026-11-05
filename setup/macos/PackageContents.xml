@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0"
+                    AutodeskProduct="Fusion360"
+                    AppVersion="1.0.0"
+                    Author="Michael Reeg"
+                    ProductCode="{04a83e63-f403-446a-9869-29a5e30cf272}"
+                    Name="Airfoil Splines"
+                    Description="Airfoil Splines parametric airfoil add-in for Fusion"
+                    Icon="./Contents/resources/AirfoilSplinesCommand/favicon.ico">
+    <Components>
+        <RuntimeRequirements OS="MacOS" Platform="Fusion360" />
+        <ComponentEntry AppName="Airfoil Splines"
+                        ModuleName="./Contents/AirfoilSplines.manifest"
+                        AppDescription="Airfoil Splines parametric airfoil add-in for Fusion"
+                        Type="Component"
+                        RunOnStartup="true" />
+    </Components>
+</ApplicationPackage>
