@@ -100,10 +100,13 @@ def wrap(sketch, line, inputs, cache, rotation, flip, *, supports=()):
         raise RuntimeError('AirfoilSplines custom feature definition is not registered.')
     path = inputs.itemById('file_path').value
     recipe = dict(feature_recipe.read_source(path), schema=feature_recipe.SCHEMA,
-                  rotation=int(rotation), flip=bool(flip))
+                  rotation=int(rotation), flip=bool(flip),
+                  loft_friendly=bool(inputs.itemById('loft_friendly').value)
+                  if inputs.itemById('loft_friendly') else False)
     values = dict(te=inputs.itemById('te_thickness').value,
                   smoothness=smoothing_from_input(inputs.itemById('smoothness_input')),
-                  upper_count=len(cache['upper_cp_raw']), lower_count=len(cache['lower_cp_raw']),
+                  upper_count=cache.get('first_stage_upper_count', len(cache['upper_cp_raw'])),
+                  lower_count=cache.get('first_stage_lower_count', len(cache['lower_cp_raw'])),
                   continuity=3 if cache['enforce_g3'] else 2 if cache['enforce_g2'] else 1)
     native = sketch.nativeObject or sketch
     tag(native, 'output')
@@ -251,6 +254,8 @@ def apply_edit(feature, original_recipe, original_values, recipe, values, te_exp
     # A double flip, opening/accepting, or visualization-only edit must not
     # replace the curves or rewrite unchanged attributes/parameters.
     if (any(recipe[key] != original_recipe[key] for key in ('dat', 'rotation', 'flip'))
+            or recipe.get('loft_friendly', False)
+            != original_recipe.get('loft_friendly', False)
             or values != original_values):
         update(feature, recipe, values)
     if recipe != original_recipe:
@@ -438,6 +443,9 @@ class EditSession:
         set_smoothing_input_value(smoothness, self.values['smoothness'])
         items = inputs.itemById('continuity_level').listItems
         items.item(int(self.values['continuity']) - 1).isSelected = True
+        loft_friendly = inputs.itemById('loft_friendly')
+        if loft_friendly:
+            loft_friendly.value = bool(self.recipe.get('loft_friendly', False))
         update_cp_count_labels(inputs)
         # Reuse visibility and manipulator setup without initiating a file change.
         shared = AirfoilSplinesCommandInputChangedHandler()
@@ -499,6 +507,8 @@ class EditSession:
                     recipe = dict(session.recipe)
                     recipe.update(feature_recipe.read_source(inputs.itemById('file_path').value))
                     recipe['flip'] = state.flip_orientation
+                    loft_input = inputs.itemById('loft_friendly')
+                    recipe['loft_friendly'] = bool(loft_input.value) if loft_input else False
                     values = dict(
                         te=inputs.itemById('te_thickness').value,
                         smoothness=smoothing_from_input(inputs.itemById('smoothness_input')),
@@ -507,7 +517,8 @@ class EditSession:
                         continuity=int(inputs.itemById('continuity_level').selectedItem.name[1:]))
                     # Preview needs no history rollback. Keep other airfoils visible
                     # while the dialog is open; roll only for a committed geometry edit.
-                    if (any(recipe[k] != session.recipe[k] for k in ('dat', 'rotation', 'flip'))
+                    if (any(recipe.get(k) != session.recipe.get(k)
+                            for k in ('dat', 'rotation', 'flip', 'loft_friendly'))
                             or values != session.values):
                         session.feature.timelineObject.rollTo(False)
                     apply_edit(session.feature, session.recipe, session.values, recipe, values,

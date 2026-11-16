@@ -69,6 +69,8 @@ def run_fitter(inputs, is_preview, initialize_te=True):
                 return False
 
             recipe = feature_recipe.read_source(file_path)
+            loft_input = inputs.itemById('loft_friendly')
+            recipe['loft_friendly'] = bool(loft_input.value) if loft_input else False
             is_initial_fit = (not state.fit_cache or state.current_cp_count_upper is None
                               or state.current_cp_count_lower is None)
             if is_initial_fit and initialize_te:
@@ -150,7 +152,8 @@ def run_fitter(inputs, is_preview, initialize_te=True):
                 airfoil_to_world.getCell(2, 2))
             target_plane = resolve_airfoil_plane(
                 selected_line, state.rotation_state, selected_line.startSketchPoint.worldGeometry,
-                normal_world, design.rootComponent, sketch_name)
+                normal_world, design.rootComponent, sketch_name,
+                flip=state.flip_orientation)
             if insertion is not None:
                 insertion.place_new_planes(planes)
             target_sketch = add_airfoil_sketch(source_sketch, target_plane, sketch_name)

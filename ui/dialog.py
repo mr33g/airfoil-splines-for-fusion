@@ -104,6 +104,12 @@ def create_ui_inputs(inputs):
         raw = inputs.addBoolValueInput('import_raw', t("show_input_data"), True, '', False)
         raw.isVisible = False
 
+        loft_friendly = inputs.addBoolValueInput(
+            'loft_friendly', t("loft_friendly"), True, '', False
+        )
+        loft_friendly.tooltip = t("loft_friendly_help")
+        loft_friendly.isVisible = False
+
     except Exception as e:
         app = adsk.core.Application.get()
         app.userInterface.messageBox(t("ui_creation_failed", error=traceback.format_exc()))

@@ -86,8 +86,15 @@ class WrappingTests(unittest.TestCase):
     def test_insertion_groups_only_output_even_with_unrelated_history(self):
         adsk = api_stub()
         adsk.core.ValueInput = NS(createByReal=lambda value: value)
-        recipe = NS(read_source=lambda path: {'filename': path}, SCHEMA=1,
-                    PARAMETERS=[], encode=lambda recipe: 'recipe')
+        recipe = NS(
+            read_source=lambda path: {'filename': path},
+            SCHEMA=1,
+            PARAMETERS=[
+                ('upper_count', 'Upper control points', ''),
+                ('lower_count', 'Lower control points', ''),
+            ],
+            encode=lambda recipe: 'recipe',
+        )
         logic = ModuleType('logic')
         logic.feature_recipe = recipe
         module = load('wrap_test', 'logic/custom_feature.py',
@@ -97,7 +104,11 @@ class WrappingTests(unittest.TestCase):
         foreign = object()
         support = object()
         feature = NS(nativeObject=None, attributes=NS(add=Mock()))
-        data = NS(addDependency=Mock(return_value=True), setStartAndEndFeatures=Mock(return_value=True))
+        data = NS(
+            addCustomParameter=Mock(return_value=True),
+            addDependency=Mock(return_value=True),
+            setStartAndEndFeatures=Mock(return_value=True),
+        )
         collection = NS(createInput=Mock(return_value=data), add=Mock(return_value=feature))
         native = NS(attributes=NS(add=Mock()), parentComponent=NS(features=NS(customFeatures=collection)))
         sketch = NS(nativeObject=native)
@@ -110,10 +121,23 @@ class WrappingTests(unittest.TestCase):
         data.setStartAndEndFeatures.side_effect = set_range
         values = {'file_path': 'foil.dat', 'te_thickness': .01, 'smoothness_input': 10}
         inputs = NS(itemById=lambda key: NS(value=values.get(key), valueOne=values.get(key)))
-        cache = dict(upper_cp_raw=[1, 2], lower_cp_raw=[1, 2], enforce_g3=False, enforce_g2=True)
+        cache = dict(
+            upper_cp_raw=list(range(35)),
+            lower_cp_raw=list(range(35)),
+            first_stage_upper_count=8,
+            first_stage_lower_count=9,
+            enforce_g3=False,
+            enforce_g2=True,
+        )
         module.wrap(sketch, object(), inputs, cache, 0, False)
         self.assertEqual(feature.features, [native])
         data.setStartAndEndFeatures.assert_called_once_with(native, native)
+        data.addCustomParameter.assert_any_call(
+            'upper_count', 'Upper control points', 8, '', True
+        )
+        data.addCustomParameter.assert_any_call(
+            'lower_count', 'Lower control points', 9, '', True
+        )
 
 
 class RecipeTests(unittest.TestCase):
@@ -157,6 +181,33 @@ class RecipeTests(unittest.TestCase):
         self.assertEqual((len(data['upper_knots']), len(data['lower_knots'])), (13, 13))
         self.assertTrue(np.all((data['upper_knots'][5:-5] > 0)
                                & (data['upper_knots'][5:-5] < 1)))
+
+    def test_loft_friendly_recipe_uses_fixed_x_second_stage(self):
+        reference = self.recipe.fit_data(
+            dict(dat=self.dat, schema=1), dict(self.values), 10
+        )
+        converted = self.recipe.fit_data(
+            dict(dat=self.dat, schema=1, loft_friendly=True),
+            dict(self.values),
+            10,
+        )
+        self.assertFalse(reference['loft_friendly'])
+        self.assertTrue(converted['loft_friendly'])
+        self.assertEqual((converted['degree_u'], converted['degree_l']), (4, 4))
+        self.assertEqual(
+            (len(converted['upper_cp_raw']), len(converted['lower_cp_raw'])),
+            (35, 35),
+        )
+        self.assertGreaterEqual(converted['conversion_max_error'], 0.0)
+        np.testing.assert_allclose(
+            converted['upper_cp_raw'][:, 0],
+            converted['lower_cp_raw'][:, 0],
+            rtol=0.0,
+            atol=0.0,
+        )
+        self.assertEqual(len(reference['upper_cp_raw']), 8)
+        self.assertEqual(converted['first_stage_upper_count'], 8)
+        self.assertEqual(converted['first_stage_lower_count'], 8)
 
     def test_invalid_parameters_rejected_before_fitting(self):
         for change in (dict(te=-1), dict(upper_count=4.5), dict(lower_count=20),
@@ -668,6 +719,33 @@ class RecomputeTests(unittest.TestCase):
         self.module.update.assert_not_called()
         feature.attributes.add.assert_not_called()
         self.assertEqual(feature.name, 'User name')
+
+    def test_loft_friendly_edit_rebuilds_geometry_in_both_directions(self):
+        values = dict(te=0.02)
+        parameter = NS(expression='0.2 mm')
+        feature = NS(
+            parameters=NS(itemById=lambda _: parameter),
+            attributes=NS(add=Mock()),
+            name='User name',
+        )
+        self.recipe.PARAMETERS = [('te', 'TE', 'mm')]
+        self.recipe.encode = Mock(return_value='encoded')
+        self.module.update = Mock()
+
+        for original_value, changed_value in ((False, True), (True, False)):
+            with self.subTest(original=original_value, changed=changed_value):
+                original = dict(
+                    dat='embedded', rotation=0, flip=False,
+                    filename='foil.dat', loft_friendly=original_value,
+                )
+                changed = dict(original, loft_friendly=changed_value)
+                self.module.apply_edit(
+                    feature, original, values, changed, dict(values), '0.2 mm'
+                )
+                self.module.update.assert_called_once_with(
+                    feature, changed, values
+                )
+                self.module.update.reset_mock()
 
     def test_filename_edit_renames_owned_sketch_and_support_planes(self):
         helper = NS(name='old - sketch support', nativeObject=None)

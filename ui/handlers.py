@@ -197,7 +197,7 @@ class AirfoilSplinesCommandInputChangedHandler(adsk.core.InputChangedEventHandle
                     if line_select and line_select.selectionCount > 0:
                         state.needs_refit = True
 
-            elif changed_id in ['continuity_level', 'smoothness_input', 'cp_count_upper', 'cp_count_lower']:
+            elif changed_id in ['continuity_level', 'smoothness_input', 'cp_count_upper', 'cp_count_lower', 'loft_friendly']:
                 # Correct CP count values before triggering refit
                 if changed_id =='cp_count_upper' and state.current_cp_count_upper is not None:
                     state.current_cp_count_upper = min(config.MAX_CP_COUNT, state.current_cp_count_upper + 1)
@@ -232,6 +232,7 @@ class AirfoilSplinesCommandInputChangedHandler(adsk.core.InputChangedEventHandle
             has_selection = chord_line_input.selectionCount > 0 and file_path_input.value != ""
 
             toggle_ids = ['initial_cp_count', 'cp_count_upper', 'cp_count_lower', 'te_thickness', 'smoothness_input', 'continuity_level',
+                          'loft_friendly',
                           'import_raw',
                           'rotate_airfoil', 'flip_airfoil', 'curvature_comb',
                           'comb_scale', 'comb_density', 'fitter_settings', 'import_settings', 'reset_button']
@@ -296,7 +297,7 @@ class AirfoilSplinesCommandInputChangedHandler(adsk.core.InputChangedEventHandle
             # Always trigger preview when parameters change (if line and file are selected)
             if has_selection:
                 refit_ids = ['cp_count_upper', 'cp_count_lower', 'smoothness_input', 'continuity_level',
-                             'file_path', 'chord_line', 'te_thickness']
+                             'file_path', 'chord_line', 'te_thickness', 'loft_friendly']
                 update_ids = ['import_raw', 'rotate_airfoil', 'flip_airfoil',
                               'curvature_comb', 'comb_scale', 'comb_density']
                 if changed_id in refit_ids:

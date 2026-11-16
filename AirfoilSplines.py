@@ -17,11 +17,11 @@ if addin_dir not in sys.path:
     sys.path.insert(0, addin_dir)
 
 vendor_dir = os.path.join(addin_dir, '_vendor')
-if vendor_dir not in sys.path:
-    sys.path.insert(0, vendor_dir)
 lib_dir = os.path.join(addin_dir, 'lib')
-if lib_dir not in sys.path:
-    sys.path.insert(0, lib_dir)
+for dependency_dir in (lib_dir, vendor_dir):
+    if dependency_dir in sys.path:
+        sys.path.remove(dependency_dir)
+    sys.path.insert(0, dependency_dir)
 
 # Local imports after path setup
 from utils.i18n import t

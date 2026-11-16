@@ -4,8 +4,9 @@ import math
 from pathlib import Path
 from functools import lru_cache
 from copy import deepcopy
+from scipy.interpolate import BSpline
 import airfoil_splines_settings as config
-from airfoil_splines_core import bspline_helper
+from airfoil_splines_core import bspline_helper, convert_to_fixed_x
 
 from airfoil_splines_core.airfoil_processor import AirfoilProcessor
 from airfoil_splines_core.bspline_processor import BSplineProcessor
@@ -68,6 +69,36 @@ def fit_data(recipe, values, chord_length):
     # Callers that persist parameters must store the settings that produced the curve.
     values['smoothness'] = data['effective_smoothness']
     values['continuity'] = data['effective_continuity']
+    if recipe.get('loft_friendly', False):
+        references = (
+            BSpline(data['upper_knots'], data['upper_cp_raw'], data['degree_u']),
+            BSpline(data['lower_knots'], data['lower_cp_raw'], data['degree_l']),
+        )
+        converted = convert_to_fixed_x(*references)
+        data.update(
+            upper_cp_raw=converted.upper_control_points,
+            lower_cp_raw=converted.lower_control_points,
+            upper_knots=converted.knots.copy(),
+            lower_knots=converted.knots.copy(),
+            degree_u=converted.degree,
+            degree_l=converted.degree,
+            param_exponent_upper=2.0,
+            param_exponent_lower=2.0,
+            loft_friendly=True,
+            conversion_max_error=converted.max_error_over_chord,
+            conversion_side_max_errors=converted.side_max_errors_over_chord,
+        )
+        for suffix, curve, reference in (
+            ('u', converted.upper_curve, data['error_upper']),
+            ('l', converted.lower_curve, data['error_lower']),
+        ):
+            _, maximum, index, _ = bspline_helper.calculate_bspline_fitting_error(
+                curve, reference, param_exponent=2.0, return_max_error=True
+            )
+            data['err_' + suffix] = maximum
+            data['max_err_pt_' + suffix] = reference[index].copy()
+    else:
+        data['loft_friendly'] = False
     return data
 
 
@@ -119,6 +150,8 @@ def _fit_cached(dat, te, smoothness, upper_count, lower_count, continuity):
         upper_cp_raw=bspline.upper_control_points, lower_cp_raw=bspline.lower_control_points,
         upper_knots=bspline.upper_knot_vector, lower_knots=bspline.lower_knot_vector,
         degree_u=bspline.degree_upper, degree_l=bspline.degree_lower,
+        first_stage_upper_count=bspline.num_cp_upper,
+        first_stage_lower_count=bspline.num_cp_lower,
         is_sharp=bspline.is_sharp_te, err_u=err_u, err_l=err_l,
         max_err_pt_u=point_u, max_err_pt_l=point_l,
         raw_upper=raw_upper, raw_lower=raw_lower, error_upper=error_upper, error_lower=error_lower,

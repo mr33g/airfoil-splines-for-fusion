@@ -64,7 +64,7 @@ def with_sketch_support(source_sketch, support, name, operation, can_retry=lambd
 
 
 def resolve_airfoil_plane(selected_line, rotation_state, point_world, normal_world,
-                          root_component, name):
+                          root_component, name, *, flip=False):
     """Return a planar entity shared by the fixed and adjustable output paths."""
     source_sketch = selected_line.parentSketch
     rotation_state %= 4
@@ -91,9 +91,16 @@ def resolve_airfoil_plane(selected_line, rotation_state, point_world, normal_wor
         plane_input = planes.createInput()
         if selected_line.assemblyContext:
             plane_input.occurrenceForCreation = selected_line.assemblyContext
-        theta = rotation_state * math.pi / 2.0
+        # setByAngle uses the selected line's direction as its rotation axis.
+        # Reversing a chord line therefore reverses the resulting plane normal.
+        # ``flip`` already records the corresponding nose-to-tail reversal in
+        # the airfoil frame; use it here as well so equivalent chord frames
+        # create equally oriented output sketches.
+        theta = math.pi / 2.0 if rotation_state == 1 else -math.pi / 2.0
+        if flip:
+            theta = -theta
         if not plane_input.setByAngle(
-                selected_line, adsk.core.ValueInput.createByReal(-theta), candidate):
+                selected_line, adsk.core.ValueInput.createByReal(theta), candidate):
             raise AirfoilPlaneError("Fusion rejected the angled airfoil plane.")
         return planes.add(plane_input)
 

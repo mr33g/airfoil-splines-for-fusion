@@ -97,8 +97,45 @@ class SupportTests(unittest.TestCase):
         self.source.parentComponent=NS(constructionPlanes=planes)
         result=self.module.resolve_airfoil_plane(line,1,NS(x=2,y=4,z=3),NS(x=0,y=-1,z=0),self.root,'foil')
         self.assertIs(result,plane)
-        plane_input.setByAngle.assert_called_once_with(line,-np.pi/2,self.source.referencePlane)
+        plane_input.setByAngle.assert_called_once_with(line,np.pi/2,self.source.referencePlane)
         self.assertFalse(plane.isLightBulbOn)
+
+    def test_flip_reverses_angled_plane_rotation(self):
+        line=NS(parentSketch=self.source, assemblyContext=None)
+        planes=[]
+        inputs=[]
+        def create_input():
+            item=NS(setByAngle=Mock(return_value=True))
+            inputs.append(item)
+            return item
+        collection=NS(createInput=create_input,
+                      add=lambda item:NS(isLightBulbOn=True, name=''))
+        self.source.parentComponent=NS(constructionPlanes=collection)
+        point=NS(x=2,y=4,z=3)
+        normal=NS(x=0,y=1,z=0)
+
+        self.module.resolve_airfoil_plane(
+            line,1,point,normal,self.root,'unflipped',flip=False)
+        self.module.resolve_airfoil_plane(
+            line,1,point,normal,self.root,'flipped',flip=True)
+
+        inputs[0].setByAngle.assert_called_once_with(
+            line,np.pi/2,self.source.referencePlane)
+        inputs[1].setByAngle.assert_called_once_with(
+            line,-np.pi/2,self.source.referencePlane)
+
+    def test_three_quarter_turn_uses_opposite_base_rotation(self):
+        line=NS(parentSketch=self.source, assemblyContext=None)
+        plane=NS()
+        plane_input=NS(setByAngle=Mock(return_value=True))
+        self.source.parentComponent=NS(constructionPlanes=NS(
+            createInput=lambda:plane_input,add=Mock(return_value=plane)))
+
+        self.module.resolve_airfoil_plane(
+            line,3,NS(x=2,y=4,z=3),NS(x=0,y=1,z=0),self.root,'foil')
+
+        plane_input.setByAngle.assert_called_once_with(
+            line,-np.pi/2,self.source.referencePlane)
 
     def test_rejected_sketch_support_retries_once_with_helper(self):
         helper, output=object(),object()

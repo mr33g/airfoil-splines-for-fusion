@@ -94,6 +94,14 @@ class DirectModelingTests(unittest.TestCase):
         self.assertTrue(self.execute())
         self.target.sketchCurves.sketchLines.addByTwoPoints.assert_not_called()
 
+    def test_chord_flip_is_forwarded_to_support_plane_resolution(self):
+        self.setup_case()
+        self.state.flip_orientation = True
+
+        self.assertTrue(self.execute())
+
+        self.assertEqual(self.resolve.call_args.kwargs, {'flip': True})
+
     def test_parametric_output_still_wraps_and_places_feature(self):
         self.setup_case(parametric=True)
         self.assertTrue(self.execute())
